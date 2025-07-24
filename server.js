@@ -9,12 +9,8 @@ app.use(express.json());
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "smartreply_token";
 
 // 📲 CHANNEL TOKENS
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
-const WHATSAPP_PHONE_ID = process.env.WHATSAPP_PHONE_ID;
-
 const MESSENGER_TOKEN = process.env.MESSENGER_TOKEN;
 const INSTAGRAM_TOKEN = process.env.INSTAGRAM_TOKEN;
-
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // 📍 ROUTE FOR VERIFICATION
@@ -36,17 +32,6 @@ app.post("/webhook", async (req, res) => {
   const body = req.body;
 
   try {
-    if (body.object === "whatsapp_business_account") {
-      const message = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-      const from = message?.from;
-      const text = message?.text?.body;
-
-      if (from && text) {
-        const reply = await getAIReply(text);
-        await sendWhatsAppReply(from, reply);
-      }
-    }
-
     if (body.object === "page") {
       for (const entry of body.entry) {
         for (const event of entry.messaging) {
@@ -56,7 +41,7 @@ app.post("/webhook", async (req, res) => {
           if (senderId && message) {
             const reply = await getAIReply(message);
 
-            if (event.sender.id.startsWith("IG")) {
+            if (senderId.startsWith("IG")) {
               await sendInstagramReply(senderId, reply);
             } else {
               await sendMessengerReply(senderId, reply);
@@ -94,25 +79,6 @@ async function getAIReply(message) {
     console.error("OpenAI Error:", err.message);
     return "Sorry, I couldn't understand that.";
   }
-}
-
-// 📤 WHATSAPP REPLY
-async function sendWhatsAppReply(to, message) {
-  await axios.post(
-    `https://graph.facebook.com/v18.0/${WHATSAPP_PHONE_ID}/messages`,
-    {
-      messaging_product: "whatsapp",
-      to,
-      type: "text",
-      text: { body: message },
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
 }
 
 // 📤 MESSENGER REPLY
